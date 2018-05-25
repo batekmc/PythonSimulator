@@ -6,11 +6,7 @@
 import pandas as pd
 
 class Sensor(object):
-    
-    _sensorData = {}
-    _sensorName = ""
-    _battery = None
-    
+       
     
     def __init__(self, name):
         self._sensorName = name
@@ -21,7 +17,7 @@ class Sensor(object):
         self._sensorData = data
     
     def GetOutputBasedOnTimestamp(self, timestamp):
-        hasBattery = _battery.dischargePower(timestamp)
+        hasBattery = self._battery.dischargePower(timestamp)
         return self._sensorData[timestamp] if hasBattery else "Battery discharged!"
     
     def batteryLeft(self):
@@ -29,8 +25,6 @@ class Sensor(object):
     
 
 class ExcelFileImporter(object):
-
-    _fileName = ""
     
     def __init__(self, fileName):
         self._fileName = fileName
@@ -55,9 +49,7 @@ class DTO(object):
     
     
 class DataInitializer(object):
-    
-    _excelFileName = ""
-    
+        
     def __init__(self, excelFileName):
         self._excelFileName = excelFileName
         print ("Data initialization begins!")
@@ -96,62 +88,70 @@ class DataInitializer(object):
             
 class Battery(object):
     
-    _capacity = 0
-    _energyStep = 0
-    _lastTime = -1
-    _firstTimeCheck = True
-    
     def __init__(self, capacity= 100, energyStep= 1):
-        _capacity = capacity
-        _energyStep = energyStep
+        self._capacity = capacity
+        self._energyStep = energyStep
+        self._lastTime = -1
+        self._firstTimeCheck = True
     
     # returns true, if there is power left
     def dischargePower(self, time):
-        if _firstTimeCheck:
-            _capacity -= _energyStep
-            _lastTime = time
-            _firstTimeCheck = False
+        if self._firstTimeCheck:
+            self._capacity -= self._energyStep
+            self._lastTime = time
+            self._firstTimeCheck = False
         else:
-            timeDiff = time - _lastTime
-            _capacity -= _energyStep
-            _lastTime = time
-        return _capacity > 0
+            timeDiff = time - self._lastTime
+            self._capacity -= self._energyStep
+            self._lastTime = time
+        return self._capacity > 0
     
     def capacityLeft(self):
-        return _capacity
+        return self._capacity
             
 
 class RunSimulation(object):
     
-    _sensorsList = []
-    _verbose = False
-    _excelDataPath = r""
-    
-    def __init__(self,excelDataPath,  verbose = False):
-        _excelDataPath = excelDataPath
-        _verbose = verbose
+    def __init__(self,excelDataPath,  verbose = False, toFile=False, fileName=""):
+        self._excelDataPath = excelDataPath
+        self._verbose = verbose
+        self._printToFile = toFile
+        self._fileName = fileName
+        if self._printToFile:
+            if self._fileName is "":
+                self._fileName = "sensorOutput.txt"
+            self._file = open(self._fileName, "w")
         print("simulatin initalized!")
         
     def printV(self, text):
-        if _verbose:
-            print(text)
+        if self._verbose:
+            if self._printToFile:
+                self._file.write(text  + "\n")        
+            else:
+                print(text)
+    
+    def closeFileOutput(self):
+        if self._printToFile:
+            self._file.close()
         
         
     def runSimulation(self):
         dataIOnitializer = DataInitializer(self._excelDataPath)
-        _sensorList = dataIOnitializer.LOadDataAndReturnSensors()
+        sensorList = dataIOnitializer.LOadDataAndReturnSensors()
         
         for time in DTO._times:
             
-            for sensor in _sensorList:
+            for sensor in sensorList:
                 
-                printV(sensor._sensorName + ";CO2_level:" + ";battery_left:" + sensor.batteryLeft())
-
+                self.printV(sensor._sensorName + ";CO2_level:" + ";battery_left:" + str(sensor.batteryLeft()))
+        
+        self.closeFileOutput()
+        
 
 ##########################################################################################################
 xslPath = r"C:\Users\batiha\Downloads\Data for UNI Ostrava\0010 CO-Sensorvalues on event base.xlsx"
 
-simulation = RunSimulation(xslPath, True)                    
+simulation = RunSimulation(xslPath, True, True)                    
 
 simulation.runSimulation()
             
